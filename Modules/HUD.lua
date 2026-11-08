@@ -1,12 +1,14 @@
 -- // Modules/HUD.lua
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local HUDModule = {}
 
 function HUDModule.GetTargetedCharacter(silentAimData, aiModule)
+    local Camera = Workspace.CurrentCamera
+    if not Camera then return nil end
+
     local closestChar = nil
     local closestDistance = silentAimData.FovRadius
     local screenCenter = Camera.ViewportSize / 2
@@ -59,7 +61,6 @@ function HUDModule.GetEquippedItems(char, flatIcons)
     local items = { weapon = nil, armor = {} }
     if not char then return items end
 
-    -- Check for tools equipped inside character or backpack
     local player = Players:GetPlayerFromCharacter(char)
     if player and player.Character then
         for _, tool in ipairs(player.Character:GetChildren()) do
