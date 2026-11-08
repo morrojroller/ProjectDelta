@@ -15,7 +15,7 @@ if not success or not bullet or not bullet.CreateBullet then
     return LocalPlayer:Kick("Couldn't Require Bullet Module.")
 end
 
--- // Update with your actual GitHub username and repository name!
+-- // Corrected Raw URL pointing directly to your repository files
 local baseUrl = "https://raw.githubusercontent.com/morrojroller/ProjectDelta/main/Modules/"
 
 local function fetchModule(moduleName)
@@ -24,8 +24,8 @@ local function fetchModule(moduleName)
         return game:HttpGet(url)
     end)
     
-    if not fetchSuccess or not res or res == "404: Not Found" then
-        return LocalPlayer:Kick("Failed to fetch module from GitHub: " .. moduleName)
+    if not fetchSuccess or not res or res == "404: Not Found" or string.find(res, "<html") then
+        return LocalPlayer:Kick("Failed to fetch raw module: " .. moduleName)
     end
     
     local func, err = loadstring(res)
@@ -100,7 +100,7 @@ table.insert(activeConnections, UserInputService.InputBegan:Connect(function(inp
         Combat.ApplyAmmoMods(Config.Data)
     elseif input.KeyCode == Enum.KeyCode.RightAlt then
         uiElements.MainFrame.Visible = not uiElements.MainFrame.Visible
-    elseif input.KeyCode == Enum.KeyCode.Delete then
+    elseif input.KeyCode == Enum.KeyCode.Delete thenC
         globalCleanup()
     end
 end))
