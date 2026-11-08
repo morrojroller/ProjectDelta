@@ -1,4 +1,4 @@
--- // Modules/ESP.lua
+-- // Modules/ESP.lua (Patched for Line Styling & Camera Safety)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
@@ -46,6 +46,25 @@ function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, ic
         return
     end
 
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.IgnoreWater = true
+
+    local function isPartVisible(part)
+        if not part then return false end
+        local rayOrigin = Camera.CFrame.Position
+        local rayDirection = (part.Position - rayOrigin)
+        local filterList = {}
+        if LocalPlayer.Character then table.insert(filterList, LocalPlayer.Character) end
+        raycastParams.FilterDescendantsInstances = filterList
+        local result = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        if result then
+            if result.Instance == part or result.Instance:IsDescendantOf(part.Parent) then return true end
+            return false
+        end
+        return true
+    end
+
     local function processChar(char, isPlayer, playerName, displayName)
         if not char or Players:GetPlayerFromCharacter(char) == LocalPlayer then return end
         local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -87,6 +106,15 @@ function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, ic
         local head = char:FindFirstChild("Head")
 
         if head then
+            if (head.Position - Camera.CFrame.Position).Magnitude <= 2.0 then
+                charData.TeamText.Visible = false
+                charData.NameText.Visible = false
+                charData.InfoText.Visible = false
+                charData.WeaponText.Visible = false
+                for _, line in ipairs(charData.Lines) do line.Visible = false end
+                return
+            end
+
             local headPos, onScreenHead = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1.8, 0))
             if onScreenHead then
                 if isExcluded then
@@ -107,19 +135,21 @@ function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, ic
 
         local footPart = char:FindFirstChild("RightFoot") or char:FindFirstChild("LeftFoot") or rootPart
         if footPart then
-            local footPos, onScreenFoot = Camera:WorldToViewportPoint(footPart.Position - Vector3.new(0, 2.5, 0))
-            if onScreenFoot then
-                charData.InfoText.Text = math.floor(distance) .. " studs | HP: " .. math.floor(humanoid.Health)
-                charData.InfoText.Position = Vector2.new(footPos.X, footPos.Y)
-                charData.InfoText.Visible = true
+            if (footPart.Position - Camera.CFrame.Position).Magnitude > 2.0 then
+                local footPos, onScreenFoot = Camera:WorldToViewportPoint(footPart.Position - Vector3.new(0, 2.5, 0))
+                if onScreenFoot then
+                    charData.InfoText.Text = math.floor(distance) .. " studs | HP: " .. math.floor(humanoid.Health)
+                    charData.InfoText.Position = Vector2.new(footPos.X, footPos.Y)
+                    charData.InfoText.Visible = true
 
-                local equipped = hudModule.GetEquippedItems(char, icons)
-                charData.WeaponText.Text = equipped.weapon or "None"
-                charData.WeaponText.Position = Vector2.new(footPos.X, footPos.Y + 14)
-                charData.WeaponText.Visible = true
-            else
-                charData.InfoText.Visible = false
-                charData.WeaponText.Visible = false
+                    local equipped = hudModule.GetEquippedItems(char, icons)
+                    charData.WeaponText.Text = equipped.weapon or "None"
+                    charData.WeaponText.Position = Vector2.new(footPos.X, footPos.Y + 14)
+                    charData.WeaponText.Visible = true
+                else
+                    charData.InfoText.Visible = false
+                    charData.WeaponText.Visible = false
+                end
             end
         end
 
@@ -127,19 +157,25 @@ function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, ic
         for _, bone in ipairs(R6_Bones) do
             local partA, partB = char:FindFirstChild(bone[1]), char:FindFirstChild(bone[2])
             if partA and partB then
-                local posA, onA = Camera:WorldToViewportPoint(partA.Position)
-                local posB, onB = Camera:WorldToViewportPoint(partB.Position)
-                if onA or onB then
-                    activeLineIndex = activeLineIndex + 1
-                    local line = charData.Lines[activeLineIndex]
-                    if not line then
-                        line = Drawing.new("Line")
-                        line.Thickness = 1.5
-                        charData.Lines[activeLineIndex] = line
+                if (partA.Position - Camera.CFrame.Position).Magnitude > 2.0 and (partB.Position - Camera.CFrame.Position).Magnitude > 2.0 then
+                    local posA, onA = Camera:WorldToViewportPoint(partA.Position)
+                    local posB, onB = Camera:WorldToViewportPoint(partB.Position)
+                    if onA or onB then
+                        activeLineIndex = activeLineIndex + 1
+                        local line = charData.Lines[activeLineIndex]
+                        if not line then
+                            line = Drawing.new("Line")
+                            line.Thickness = 1.5
+                            charData.Lines[activeLineIndex] = line
+                        end
+                        line.From = Vector2.new(posA.X, posA.Y)
+                        line.To = Vector2.new(posB.X, posB.Y)
+                        
+                        -- Set bone visibility color mapping (Green = visible, Red = behind cover)
+                        local boneVisible = isPartVisible(partA) or isPartVisible(partB)
+                        line.Color = boneVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+                        line.Visible = true
                     end
-                    line.From = Vector2.new(posA.X, posA.Y)
-                    line.To = Vector2.new(posB.X, posB.Y)
-                    line.Visible = true
                 end
             end
         end
