@@ -140,7 +140,6 @@ function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, fl
             if (footPart.Position - Camera.CFrame.Position).Magnitude > 2.0 then
                 local footPos, onScreenFoot = Camera:WorldToViewportPoint(footPart.Position - Vector3.new(0, 2.5, 0))
                 if onScreenFoot then
-                    charData.InfoText.Text = math.floor(distance) .. " studs | HP: " + math.floor(humanoid.Health)
                     charData.InfoText.Text = math.floor(distance) .. " studs | HP: " .. math.floor(humanoid.Health)
                     charData.InfoText.Position = Vector2.new(footPos.X, footPos.Y)
                     charData.InfoText.Visible = true
