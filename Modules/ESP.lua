@@ -1,7 +1,6 @@
--- // Modules/ESP.lua (Patched for Line Styling & Camera Safety)
+-- // Modules/ESP.lua
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local ESPModule = {
@@ -32,7 +31,10 @@ local R6_Bones = {
     {"RightLowerLeg", "RightFoot"}
 }
 
-function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, icons)
+function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, flatIcons)
+    local Camera = Workspace.CurrentCamera
+    if not Camera then return end
+
     for char, _ in pairs(ESPModule.CharacterDrawings) do
         if not char or not char.Parent or Players:GetPlayerFromCharacter(char) == LocalPlayer or not char:FindFirstChildOfClass("Humanoid") or char:FindFirstChildOfClass("Humanoid").Health <= 0 then
             ESPModule.RemoveDrawings(char)
@@ -138,11 +140,12 @@ function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, ic
             if (footPart.Position - Camera.CFrame.Position).Magnitude > 2.0 then
                 local footPos, onScreenFoot = Camera:WorldToViewportPoint(footPart.Position - Vector3.new(0, 2.5, 0))
                 if onScreenFoot then
+                    charData.InfoText.Text = math.floor(distance) .. " studs | HP: " + math.floor(humanoid.Health)
                     charData.InfoText.Text = math.floor(distance) .. " studs | HP: " .. math.floor(humanoid.Health)
                     charData.InfoText.Position = Vector2.new(footPos.X, footPos.Y)
                     charData.InfoText.Visible = true
 
-                    local equipped = hudModule.GetEquippedItems(char, icons)
+                    local equipped = hudModule.GetEquippedItems(char, flatIcons)
                     charData.WeaponText.Text = equipped.weapon or "None"
                     charData.WeaponText.Position = Vector2.new(footPos.X, footPos.Y + 14)
                     charData.WeaponText.Visible = true
@@ -171,7 +174,6 @@ function ESPModule.Update(visualsEnabled, silentAimData, aiModule, hudModule, ic
                         line.From = Vector2.new(posA.X, posA.Y)
                         line.To = Vector2.new(posB.X, posB.Y)
                         
-                        -- Set bone visibility color mapping (Green = visible, Red = behind cover)
                         local boneVisible = isPartVisible(partA) or isPartVisible(partB)
                         line.Color = boneVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
                         line.Visible = true
