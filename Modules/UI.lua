@@ -1,4 +1,4 @@
--- // Modules/UI.lua (Patched with Inventory HUD & Icon Support)
+-- // Modules/UI.lua
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
@@ -6,7 +6,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local UIModule = {}
 
-function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combatModule, icons, hudModule, aiModule)
+function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combatModule, flatIcons, hudModule, aiModule)
     local guiParent = (gethui and gethui()) or (syn and syn.protect_gui and CoreGui) or CoreGui
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "SilentAimConfig"
@@ -14,7 +14,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     screenGui.ResetOnSpawn = false
     screenGui.Parent = guiParent
 
-    -- // FOV Circle
+    -- FOV Circle
     local fovCircle = Drawing.new("Circle")
     fovCircle.Visible = silentAimData.Enabled
     fovCircle.Filled = false
@@ -24,7 +24,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     fovCircle.Transparency = 1
     fovCircle.Radius = silentAimData.FovRadius
 
-    -- // Main Config Frame
+    -- Main Config Frame
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0, 540, 0, 420)
@@ -59,7 +59,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = titleBar
 
-    -- // Draggable Implementation
+    -- Draggable implementation for Main Menu
     local draggingMain, dragInputMain, dragStartMain, startPosMain
     titleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -87,7 +87,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
         end
     end)
 
-    -- // Top Control Buttons Container
+    -- Top Control Buttons Container
     local topControlsFrame = Instance.new("Frame")
     topControlsFrame.Size = UDim2.new(1, -20, 0, 32)
     topControlsFrame.Position = UDim2.new(0, 10, 0, 50)
@@ -142,7 +142,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
         if configModule.Save then configModule:Save() end
     end)
 
-    -- // Left Container (HitParts)
+    -- Left Container (HitParts)
     local leftContainer = Instance.new("Frame")
     leftContainer.Size = UDim2.new(0.5, -15, 1, -100)
     leftContainer.Position = UDim2.new(0, 10, 0, 90)
@@ -172,7 +172,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     partsLayout.Padding = UDim.new(0, 5)
     partsLayout.Parent = partsScrolling
 
-    -- // Right Container (Player Exclusions)
+    -- Right Container (Player Exclusions)
     local rightContainer = Instance.new("Frame")
     rightContainer.Size = UDim2.new(0.5, -15, 1, -100)
     rightContainer.Position = UDim2.new(0.5, 5, 0, 90)
@@ -309,7 +309,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
         end
     end)
 
-    -- // Inventory HUD Frame & Icon Loop
+    -- Inventory HUD Frame & Icon Loop
     local hudFrame = Instance.new("Frame")
     hudFrame.Name = "InventoryHUD"
     hudFrame.Size = UDim2.new(0, 115, 0, 520)
@@ -413,7 +413,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
                 local targetPlayer = Players:GetPlayerFromCharacter(targetChar)
                 targetNameLabel.Text = targetPlayer and targetPlayer.Name or "AI TARGET"
 
-                local equipped = hudModule.GetEquippedItems(targetChar, icons)
+                local equipped = hudModule.GetEquippedItems(targetChar, flatIcons)
                 local orderedItems = {}
                 if equipped.weapon then table.insert(orderedItems, equipped.weapon) end
                 for _, armorName in ipairs(equipped.armor) do table.insert(orderedItems, armorName) end
@@ -428,7 +428,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
 
                 for _, itemName in ipairs(orderedItems) do
                     local slot = getOrCreateSlot()
-                    slot.Icon.Image = icons[itemName] or "rbxassetid://0"
+                    slot.Icon.Image = flatIcons[itemName] or "rbxassetid://0"
                     slot.Name.Text = itemName
                     table.insert(activeHudSlots, slot)
                 end
