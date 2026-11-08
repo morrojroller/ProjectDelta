@@ -2,7 +2,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local CombatModule = {
@@ -41,7 +40,6 @@ function CombatModule.RestoreAmmoMods()
         if ammo and ammo.Parent then
             if original.Recoil ~= nil then ammo:SetAttribute("RecoilStrength", original.Recoil) end
             if original.Drop ~= nil then ammo:SetAttribute("ProjectileDrop", original.Drop) end
-            if original.Drag ~= nil then ammo:SetAttribute("ProjectileDrop", original.Drop) end
             if original.Drag ~= nil then ammo:SetAttribute("Drag", original.Drag) end
         end
     end
@@ -53,7 +51,8 @@ function CombatModule.InitBulletHook(bulletModule, silentAimData, aiModule)
     raycastParams.IgnoreWater = true
 
     local function isPartVisible(part)
-        if not part then return false end
+        local Camera = Workspace.CurrentCamera
+        if not Camera or not part then return false end
         local rayOrigin = Camera.CFrame.Position
         local rayDirection = (part.Position - rayOrigin)
         local filterList = {}
@@ -76,6 +75,9 @@ function CombatModule.InitBulletHook(bulletModule, silentAimData, aiModule)
     }
 
     local function getTarget()
+        local Camera = Workspace.CurrentCamera
+        if not Camera then return nil end
+
         local closestTarget = nil
         local closestDistance = silentAimData.FovRadius
         local screenCenter = Camera.ViewportSize / 2
@@ -126,7 +128,8 @@ function CombatModule.InitBulletHook(bulletModule, silentAimData, aiModule)
     end
 
     local function getPredictedPosition(targetPart)
-        if not targetPart then return nil end
+        local Camera = Workspace.CurrentCamera
+        if not targetPart or not Camera then return nil end
         local pos = targetPart.Position
         local rootPart = targetPart.Parent and (targetPart.Parent:FindFirstChild("HumanoidRootPart") or targetPart.Parent:FindFirstChild("Torso")) or targetPart
         local velocity = rootPart and rootPart.AssemblyLinearVelocity or Vector3.zero
