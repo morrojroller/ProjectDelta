@@ -12,7 +12,7 @@ function HUDModule.GetTargetedCharacter(silentAimData, aiModule)
     local screenCenter = Camera.ViewportSize / 2
 
     local function checkChar(char, isPlayer, playerName)
-        if not char then return end
+        if not char or char == LocalPlayer.Character then return end
         local player = Players:GetPlayerFromCharacter(char)
         if player == LocalPlayer then return end
         if isPlayer and silentAimData.ExcludedPlayers[playerName] then return end
@@ -36,7 +36,7 @@ function HUDModule.GetTargetedCharacter(silentAimData, aiModule)
         if p ~= LocalPlayer then checkChar(p.Character, true, p.Name) end
     end
     for model, _ in pairs(aiModule.CachedAI) do
-        checkChar(model, false, nil)
+        if model and model.Parent then checkChar(model, false, nil) end
     end
     return closestChar
 end
@@ -47,17 +47,28 @@ local blacklistedItems = {
     ["Shirt"] = true, ["Pants"] = true
 }
 
-local function descIsArmorLike(name, icons)
+local function descIsArmorLike(name, flatIcons)
     local lower = string.lower(name)
-    if string.find(lower, "armor") or string.find(lower, "vest") or string.find(lower, "helmet") or string.find(lower, "mask") or string.find(lower, "plate") or string.find(lower, "visor") or string.find(lower, "backpack") or string.find(lower, "gloves") or icons[name] then
+    if string.find(lower, "armor") or string.find(lower, "vest") or string.find(lower, "helmet") or string.find(lower, "mask") or string.find(lower, "plate") or string.find(lower, "visor") or string.find(lower, "backpack") or string.find(lower, "gloves") or (flatIcons and flatIcons[name]) then
         return true
     end
     return false
 end
 
-function HUDModule.GetEquippedItems(char, icons)
+function HUDModule.GetEquippedItems(char, flatIcons)
     local items = { weapon = nil, armor = {} }
     if not char then return items end
+
+    -- Check for tools equipped inside character or backpack
+    local player = Players:GetPlayerFromCharacter(char)
+    if player and player.Character then
+        for _, tool in ipairs(player.Character:GetChildren()) do
+            if tool:IsA("Tool") and not blacklistedItems[tool.Name] then
+                items.weapon = tool.Name
+                break
+            end
+        end
+    end
 
     for _, child in ipairs(char:GetChildren()) do
         local name = child.Name
@@ -68,7 +79,7 @@ function HUDModule.GetEquippedItems(char, icons)
             
             if isWeapon and not items.weapon then
                 items.weapon = name
-            elseif (className == "Accessory" or className == "Model" or descIsArmorLike(name, icons)) then
+            elseif (className == "Accessory" or className == "Model" or descIsArmorLike(name, flatIcons)) then
                 local exists = false
                 for _, existing in ipairs(items.armor) do
                     if existing == name then exists = true break end
