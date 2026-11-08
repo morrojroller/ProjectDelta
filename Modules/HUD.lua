@@ -49,9 +49,9 @@ local blacklistedItems = {
     ["Shirt"] = true, ["Pants"] = true
 }
 
-local function descIsArmorLike(name)
+local function descIsArmorLike(name, flatIcons)
     local lower = string.lower(name)
-    if string.find(lower, "armor") or string.find(lower, "vest") or string.find(lower, "helmet") or string.find(lower, "mask") or string.find(lower, "plate") or string.find(lower, "visor") or string.find(lower, "backpack") or string.find(lower, "gloves") then
+    if string.find(lower, "armor") or string.find(lower, "vest") or string.find(lower, "helmet") or string.find(lower, "mask") or string.find(lower, "plate") or string.find(lower, "visor") or string.find(lower, "backpack") or string.find(lower, "gloves") or flatIcons[name] then
         return true
     end
     return false
@@ -61,17 +61,31 @@ function HUDModule.GetEquippedItems(char, flatIcons)
     local items = { weapon = nil, armor = {} }
     if not char then return items end
 
-    local player = Players:GetPlayerFromCharacter(char)
-    
-    -- Check character tools/weapons first
-    for _, tool in ipairs(char:GetChildren()) do
-        if tool:IsA("Tool") and not blacklistedItems[tool.Name] then
-            items.weapon = tool.Name
-            break
+    for _, child in ipairs(char:GetChildren()) do
+        local name = child.Name
+        local className = child.ClassName
+        if not blacklistedItems[name] and name ~= "HumanoidRootPart" and name ~= "Head" and name ~= "Torso" then
+            local lowerName = string.lower(name)
+            local isWeapon = (className == "Tool" or className == "HopperBin" or string.find(lowerName, "rifle") or string.find(lowerName, "gun") or string.find(lowerName, "pistol") or string.find(lowerName, "shotgun") or string.find(lowerName, "smg") or string.find(lowerName, "sniper") or string.find(lowerName, "ak") or string.find(lowerName, "m4"))
+            
+            if isWeapon and not items.weapon then
+                items.weapon = name
+            elseif (className == "Accessory" or className == "Model" or descIsArmorLike(name, flatIcons)) then
+                if flatIcons[name] then
+                    local exists = false
+                    for _, existing in ipairs(items.armor) do
+                        if existing == name then exists = true break end
+                    end
+                    if not exists and name ~= items.weapon then
+                        table.insert(items.armor, name)
+                    end
+                end
+            end
         end
     end
 
-    if not items.weapon and player and player.Character then
+    local player = Players:GetPlayerFromCharacter(char)
+    if player and player.Character then
         for _, tool in ipairs(player.Character:GetChildren()) do
             if tool:IsA("Tool") and not blacklistedItems[tool.Name] then
                 items.weapon = tool.Name
@@ -80,26 +94,6 @@ function HUDModule.GetEquippedItems(char, flatIcons)
         end
     end
 
-    -- Filter armor/gear strictly by verified equipped accessories/models
-    for _, child in ipairs(char:GetChildren()) do
-        local name = child.Name
-        local className = child.ClassName
-        
-        if not blacklistedItems[name] and name ~= "HumanoidRootPart" and name ~= "Head" and name ~= "Torso" then
-            local lowerName = string.lower(name)
-            local isArmorPiece = (className == "Accessory" or className == "Model") and descIsArmorLike(name)
-            
-            if isArmorPiece and flatIcons[name] then
-                local exists = false
-                for _, existing in ipairs(items.armor) do
-                    if existing == name then exists = true break end
-                end
-                if not exists and name ~= items.weapon then
-                    table.insert(items.armor, name)
-                end
-            end
-        end
-    end
     return items
 end
 
