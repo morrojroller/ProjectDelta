@@ -1,4 +1,4 @@
--- // Project Delta Loadstring Core Manager (Debug Mode)
+-- // Project Delta Loadstring Core Manager (Diagnostic Version)
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -6,7 +6,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- Safety Checks
 if not hookfunction then return LocalPlayer:Kick("Executor Doesn't Have hookfunction.") end
 if not Drawing then return LocalPlayer:Kick("Executor Doesn't Have Drawing.") end
 
@@ -19,39 +18,40 @@ local baseUrl = "https://raw.githubusercontent.com/morrojroller/ProjectDelta/mai
 
 local function fetchModule(moduleName)
     local url = baseUrl .. moduleName .. ".lua"
-    print("[DEBUG] Fetching module:", moduleName, "from URL:", url)
+    print("[DIAGNOSTIC] Fetching:", url)
     
     local fetchSuccess, res = pcall(function()
         return game:HttpGet(url)
     end)
     
     if not fetchSuccess or not res then
-        warn("[DEBUG ERROR] HttpGet failed for module:", moduleName, "Result:", tostring(res))
+        warn("[DIAGNOSTIC ERROR] HttpGet failed for " .. moduleName .. ": " .. tostring(res))
         return nil
     end
     
-    if string.find(res, "404: Not Found") or string.find(res, "<html") then
-        warn("[DEBUG ERROR] GitHub returned 404 or HTML page instead of Lua code for:", moduleName)
+    if string.find(res, "404") or string.find(res, "<html") then
+        warn("[DIAGNOSTIC ERROR] GitHub returned a 404 or HTML page for " .. moduleName .. "! Check if your repository is Public and the branch is 'main'.")
+        print("[RESPONSE SNIPPET]:", string.sub(res, 1, 150))
         return nil
     end
     
     local func, err = loadstring(res)
     if not func then
-        warn("[DEBUG ERROR] Failed to compile module", moduleName, "Error:", tostring(err))
+        warn("[DIAGNOSTIC ERROR] Compile failed for " .. moduleName .. ": " .. tostring(err))
         return nil
     end
     
     local runSuccess, moduleData = pcall(func)
     if not runSuccess then
-        warn("[DEBUG ERROR] Runtime error executing module", moduleName, "Error:", tostring(moduleData))
+        warn("[DIAGNOSTIC ERROR] Runtime error in " .. moduleName .. ": " .. tostring(moduleData))
         return nil
     end
     
-    print("[DEBUG] Successfully loaded module:", moduleName)
+    print("[DIAGNOSTIC] Successfully loaded:", moduleName)
     return moduleData
 end
 
--- Load Modules with Safe Fallbacks
+-- Load Modules
 local Icons = fetchModule("Icons") or { Flat = {} }
 local Config = fetchModule("Config")
 local Fullbright = fetchModule("Fullbright") or { Apply = function() end }
@@ -61,16 +61,12 @@ local HUD = fetchModule("HUD") or { GetEquippedItems = function() return {} end 
 local ESP = fetchModule("ESP") or { CharacterDrawings = {}, Update = function() end, RemoveDrawings = function() end }
 local UI = fetchModule("UI") or { CreateUI = function() return {} end }
 
--- Guard against missing critical config module
-if not Config then
-    warn("[DEBUG FATAL] Config module returned nil! Check your GitHub repository files.")
+if not Config or not Config.Load then
+    warn("[FATAL] Config module failed to load. Check your F9 console logs above for the exact GitHub error.")
     return
 end
 
-if Config.Load then
-    Config:Load()
-end
-
+Config:Load()
 AI.Init()
 Combat.ApplyAmmoMods(Config.Data)
 Combat.InitBulletHook(bullet, Config.Data, AI)
@@ -79,14 +75,12 @@ if Config.Data.Fullbright then Fullbright.Apply(true) end
 
 local uiElements = UI.CreateUI(Config.Data, Config, Fullbright, Combat, Icons.Flat, HUD, AI)
 
--- // Global Cleanup System
 local activeConnections = {}
 local isCleanedUp = false
 
 local function globalCleanup()
     if isCleanedUp then return end
     isCleanedUp = true
-    print("[DEBUG] Running Global Cleanup...")
 
     pcall(function()
         for _, conn in ipairs(activeConnections) do
@@ -106,10 +100,8 @@ local function globalCleanup()
             pcall(function() ESP.RemoveDrawings(char) end)
         end
     end)
-    print("[DEBUG] Global Cleanup Finished.")
 end
 
--- Run Loops & Connections
 table.insert(activeConnections, RunService.Heartbeat:Connect(function()
     if uiElements.FovCircle then
         uiElements.FovCircle.Radius = Config.Data.FovRadius
@@ -137,4 +129,4 @@ table.insert(activeConnections, LocalPlayer.AncestryChanged:Connect(function(_, 
     if not parent then globalCleanup() end
 end))
 
-print("Project Delta SilentAim & ESP Initialized Successfully with Debug Prints!")
+print("Project Delta Initialized Successfully!")
