@@ -62,7 +62,16 @@ function HUDModule.GetEquippedItems(char, flatIcons)
     if not char then return items end
 
     local player = Players:GetPlayerFromCharacter(char)
-    if player and player.Character then
+    
+    -- Check character tools/weapons first
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") and not blacklistedItems[tool.Name] then
+            items.weapon = tool.Name
+            break
+        end
+    end
+
+    if not items.weapon and player and player.Character then
         for _, tool in ipairs(player.Character:GetChildren()) do
             if tool:IsA("Tool") and not blacklistedItems[tool.Name] then
                 items.weapon = tool.Name
@@ -71,25 +80,22 @@ function HUDModule.GetEquippedItems(char, flatIcons)
         end
     end
 
+    -- Filter armor/gear strictly by verified equipped accessories/models
     for _, child in ipairs(char:GetChildren()) do
         local name = child.Name
         local className = child.ClassName
+        
         if not blacklistedItems[name] and name ~= "HumanoidRootPart" and name ~= "Head" and name ~= "Torso" then
             local lowerName = string.lower(name)
-            local isWeapon = (className == "Tool" or className == "HopperBin" or string.find(lowerName, "rifle") or string.find(lowerName, "gun") or string.find(lowerName, "pistol") or string.find(lowerName, "shotgun") or string.find(lowerName, "smg") or string.find(lowerName, "sniper"))
+            local isArmorPiece = (className == "Accessory" or className == "Model") and descIsArmorLike(name)
             
-            if isWeapon and not items.weapon then
-                items.weapon = name
-            elseif (className == "Accessory" or className == "Model" or descIsArmorLike(name)) then
-                -- Verify it's a real armor piece existing in flatIcons to filter out fake/generic parts
-                if flatIcons[name] then
-                    local exists = false
-                    for _, existing in ipairs(items.armor) do
-                        if existing == name then exists = true break end
-                    end
-                    if not exists and name ~= items.weapon then
-                        table.insert(items.armor, name)
-                    end
+            if isArmorPiece and flatIcons[name] then
+                local exists = false
+                for _, existing in ipairs(items.armor) do
+                    if existing == name then exists = true break end
+                end
+                if not exists and name ~= items.weapon then
+                    table.insert(items.armor, name)
                 end
             end
         end
