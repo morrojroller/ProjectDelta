@@ -339,6 +339,37 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     targetNameLabel.Font = Enum.Font.GothamBold
     targetNameLabel.Parent = hudTitleBar
 
+    -- Draggable implementation for Inventory HUD
+    local draggingHUD, dragInputHUD, dragStartHUD, startPosHUD
+    hudTitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingHUD = true
+            dragStartHUD = input.Position
+            startPosHUD = hudFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    draggingHUD = false
+                    silentAimData.InventoryPositionX = hudFrame.Position.X.Offset
+                    silentAimData.InventoryPositionY = hudFrame.Position.Y.Offset
+                    if configModule.Save then configModule:Save() end
+                end
+            end)
+        end
+    end)
+
+    hudTitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInputHUD = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInputHUD and draggingHUD then
+            local delta = input.Position - dragStartHUD
+            hudFrame.Position = UDim2.new(startPosHUD.X.Scale, startPosHUD.X.Offset + delta.X, startPosHUD.Y.Scale, startPosHUD.Y.Offset + delta.Y)
+        end
+    end)
+
     local hudContainer = Instance.new("Frame")
     hudContainer.Size = UDim2.new(1, -10, 1, -44)
     hudContainer.Position = UDim2.new(0, 5, 0, 40)
