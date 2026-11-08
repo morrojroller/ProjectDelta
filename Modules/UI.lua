@@ -425,19 +425,14 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
                 if not hudFrame.Visible then return end
                 local targetChar = hudModule.GetTargetedCharacter(silentAimData, aiModule)
                 
-                for _, slot in ipairs(activeHudSlots) do
-                    slot.Parent = nil
-                    slot.Visible = false
-                    table.insert(hudSlotPool, slot)
-                end
-                table.clear(activeHudSlots)
-
                 if not targetChar then
                     targetNameLabel.Text = "NO TARGET"
-                    local slot = getOrCreateSlot()
-                    slot.Icon.Image = "rbxassetid://0"
-                    slot.Name.Text = "Searching..."
-                    table.insert(activeHudSlots, slot)
+                    for _, slot in ipairs(activeHudSlots) do
+                        slot.Parent = nil
+                        slot.Visible = false
+                        table.insert(hudSlotPool, slot)
+                    end
+                    table.clear(activeHudSlots)
                     return
                 end
 
@@ -449,11 +444,14 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
                 if equipped.weapon then table.insert(orderedItems, equipped.weapon) end
                 for _, armorName in ipairs(equipped.armor) do table.insert(orderedItems, armorName) end
 
+                for _, slot in ipairs(activeHudSlots) do
+                    slot.Parent = nil
+                    slot.Visible = false
+                    table.insert(hudSlotPool, slot)
+                end
+                table.clear(activeHudSlots)
+
                 if #orderedItems == 0 then
-                    local slot = getOrCreateSlot()
-                    slot.Icon.Image = "rbxassetid://0"
-                    slot.Name.Text = "None Equipped"
-                    table.insert(activeHudSlots, slot)
                     return
                 end
 
