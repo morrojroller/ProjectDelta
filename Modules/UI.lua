@@ -309,14 +309,15 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
         end
     end)
 
-    -- Inventory HUD Frame & Icon Loop
+    -- // Inventory HUD Frame & Icon Loop (Fixed with AutomaticSize Y)
     local hudFrame = Instance.new("Frame")
     hudFrame.Name = "InventoryHUD"
-    hudFrame.Size = UDim2.new(0, 115, 0, 520)
+    hudFrame.Size = UDim2.new(0, 115, 0, 120)
     hudFrame.Position = UDim2.new(0, silentAimData.InventoryPositionX, 0, silentAimData.InventoryPositionY)
-    hudFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
-    hudFrame.BorderColor3 = Color3.fromRGB(60, 150, 255)
-    hudFrame.BorderSizePixel = 2
+    hudFrame.BackgroundColor3 = Color3.fromRGB(13, 13, 17)
+    hudFrame.BorderColor3 = Color3.fromRGB(50, 130, 246)
+    hudFrame.BorderSizePixel = 1
+    hudFrame.AutomaticSize = Enum.AutomaticSize.Y
     hudFrame.Visible = silentAimData.InventoryVisible
     hudFrame.Parent = screenGui
 
@@ -326,7 +327,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
 
     local hudTitleBar = Instance.new("Frame")
     hudTitleBar.Size = UDim2.new(1, 0, 0, 36)
-    hudTitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    hudTitleBar.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
     hudTitleBar.BorderSizePixel = 0
     hudTitleBar.Parent = hudFrame
 
@@ -335,7 +336,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     targetNameLabel.BackgroundTransparency = 1
     targetNameLabel.Text = "NO TARGET"
     targetNameLabel.TextColor3 = Color3.fromRGB(120, 210, 255)
-    targetNameLabel.TextSize = 12
+    targetNameLabel.TextSize = 11
     targetNameLabel.Font = Enum.Font.GothamBold
     targetNameLabel.Parent = hudTitleBar
 
@@ -371,9 +372,10 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     end)
 
     local hudContainer = Instance.new("Frame")
-    hudContainer.Size = UDim2.new(1, -10, 1, -44)
-    hudContainer.Position = UDim2.new(0, 5, 0, 40)
+    hudContainer.Size = UDim2.new(1, -10, 0, 0)
+    hudContainer.Position = UDim2.new(0, 5, 0, 42)
     hudContainer.BackgroundTransparency = 1
+    hudContainer.AutomaticSize = Enum.AutomaticSize.Y
     hudContainer.Parent = hudFrame
 
     local hudLayout = Instance.new("UIListLayout")
@@ -425,14 +427,19 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
                 if not hudFrame.Visible then return end
                 local targetChar = hudModule.GetTargetedCharacter(silentAimData, aiModule)
                 
+                for _, slot in ipairs(activeHudSlots) do
+                    slot.Parent = nil
+                    slot.Visible = false
+                    table.insert(hudSlotPool, slot)
+                end
+                table.clear(activeHudSlots)
+
                 if not targetChar then
                     targetNameLabel.Text = "NO TARGET"
-                    for _, slot in ipairs(activeHudSlots) do
-                        slot.Parent = nil
-                        slot.Visible = false
-                        table.insert(hudSlotPool, slot)
-                    end
-                    table.clear(activeHudSlots)
+                    local slot = getOrCreateSlot()
+                    slot.Icon.Image = "rbxassetid://0"
+                    slot.Name.Text = "Searching..."
+                    table.insert(activeHudSlots, slot)
                     return
                 end
 
@@ -441,24 +448,21 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
 
                 local equipped = hudModule.GetEquippedItems(targetChar, flatIcons)
                 local orderedItems = {}
-                if equipped.weapon then table.insert(orderedItems, equipped.weapon) end
-                for _, armorName in ipairs(equipped.armor) do table.insert(orderedItems, armorName) end
-
-                for _, slot in ipairs(activeHudSlots) do
-                    slot.Parent = nil
-                    slot.Visible = false
-                    table.insert(hudSlotPool, slot)
-                end
-                table.clear(activeHudSlots)
+                if equipped.weapon then table.insert(orderedItems, {name = equipped.weapon}) end
+                for _, armorName in ipairs(equipped.armor) do table.insert(orderedItems, {name = armorName}) end
 
                 if #orderedItems == 0 then
+                    local slot = getOrCreateSlot()
+                    slot.Icon.Image = "rbxassetid://0"
+                    slot.Name.Text = "None Equipped"
+                    table.insert(activeHudSlots, slot)
                     return
                 end
 
-                for _, itemName in ipairs(orderedItems) do
+                for _, itemData in ipairs(orderedItems) do
                     local slot = getOrCreateSlot()
-                    slot.Icon.Image = flatIcons[itemName] or "rbxassetid://0"
-                    slot.Name.Text = itemName
+                    slot.Icon.Image = flatIcons[itemData.name] or "rbxassetid://0"
+                    slot.Name.Text = itemData.name
                     table.insert(activeHudSlots, slot)
                 end
             end)
