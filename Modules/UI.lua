@@ -57,7 +57,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     contentContainer.Size = UDim2.new(1, -20, 1, -55)
     contentContainer.Position = UDim2.new(0, 10, 0, 45)
     contentContainer.BackgroundTransparency = 1
-    contentContainer.CanvasSize = UDim2.new(0, 0, 0, 300)
+    contentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
     contentContainer.ScrollBarThickness = 4
     contentContainer.Parent = mainFrame
 
@@ -65,6 +65,11 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Padding = UDim.new(0, 8)
     contentLayout.Parent = contentContainer
+
+    -- ADD THIS AUTO-RESIZE CODE:
+    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        contentContainer.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 10)
+    end)
 
     -- Helper function to create toggles/checkboxes dynamically
     local function createToggle(name, configKey, callback)
