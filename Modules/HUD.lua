@@ -49,9 +49,9 @@ local blacklistedItems = {
     ["Shirt"] = true, ["Pants"] = true
 }
 
-local function descIsArmorLike(name, flatIcons)
+local function descIsArmorLike(name)
     local lower = string.lower(name)
-    if string.find(lower, "armor") or string.find(lower, "vest") or string.find(lower, "helmet") or string.find(lower, "mask") or string.find(lower, "plate") or string.find(lower, "visor") or string.find(lower, "backpack") or string.find(lower, "gloves") or (flatIcons and flatIcons[name]) then
+    if string.find(lower, "armor") or string.find(lower, "vest") or string.find(lower, "helmet") or string.find(lower, "mask") or string.find(lower, "plate") or string.find(lower, "visor") or string.find(lower, "backpack") or string.find(lower, "gloves") then
         return true
     end
     return false
@@ -80,13 +80,16 @@ function HUDModule.GetEquippedItems(char, flatIcons)
             
             if isWeapon and not items.weapon then
                 items.weapon = name
-            elseif (className == "Accessory" or className == "Model" or descIsArmorLike(name, flatIcons)) then
-                local exists = false
-                for _, existing in ipairs(items.armor) do
-                    if existing == name then exists = true break end
-                end
-                if not exists and name ~= items.weapon then
-                    table.insert(items.armor, name)
+            elseif (className == "Accessory" or className == "Model" or descIsArmorLike(name)) then
+                -- Verify it's a real armor piece existing in flatIcons to filter out fake/generic parts
+                if flatIcons[name] then
+                    local exists = false
+                    for _, existing in ipairs(items.armor) do
+                        if existing == name then exists = true break end
+                    end
+                    if not exists and name ~= items.weapon then
+                        table.insert(items.armor, name)
+                    end
                 end
             end
         end
