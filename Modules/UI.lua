@@ -1,4 +1,4 @@
--- // Modules/UI.lua (Patched for Modular Loadstring Support)
+-- // Modules/UI.lua (Patched with Inventory HUD & Icon Support)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
@@ -49,13 +49,6 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     titleBarCorner.CornerRadius = UDim.new(0, 8)
     titleBarCorner.Parent = titleBar
 
-    local titleFixCover = Instance.new("Frame")
-    titleFixCover.Size = UDim2.new(1, 0, 0, 10)
-    titleFixCover.Position = UDim2.new(0, 0, 1, -10)
-    titleFixCover.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-    titleFixCover.BorderSizePixel = 0
-    titleFixCover.Parent = titleBar
-
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(1, 0, 1, 0)
     titleLabel.BackgroundTransparency = 1
@@ -66,7 +59,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = titleBar
 
-    -- // Draggable Implementation for Main Menu
+    -- // Draggable Implementation
     local draggingMain, dragInputMain, dragStartMain, startPosMain
     titleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -120,7 +113,6 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
         corner.Parent = btn
     end
 
-    -- Visible Only Toggle
     local visibleToggleBtn = Instance.new("TextButton")
     visibleToggleBtn.Parent = topControlsFrame
     styleToggleButton(visibleToggleBtn, "Visible Only", silentAimData.VisibleOnly)
@@ -130,7 +122,6 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
         if configModule.Save then configModule:Save() end
     end)
 
-    -- Fullbright Toggle
     local fullbrightToggleBtn = Instance.new("TextButton")
     fullbrightToggleBtn.Parent = topControlsFrame
     styleToggleButton(fullbrightToggleBtn, "Fullbright", silentAimData.Fullbright)
@@ -141,7 +132,6 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
         if configModule.Save then configModule:Save() end
     end)
 
-    -- Hide Visibles Toggle
     local hideVisiblesToggleBtn = Instance.new("TextButton")
     hideVisiblesToggleBtn.Parent = topControlsFrame
     styleToggleButton(hideVisiblesToggleBtn, "Hide Visibles", silentAimData.HideVisibles)
@@ -319,7 +309,7 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
         end
     end)
 
-    -- // Inventory HUD Frame
+    -- // Inventory HUD Frame & Icon Loop
     local hudFrame = Instance.new("Frame")
     hudFrame.Name = "InventoryHUD"
     hudFrame.Size = UDim2.new(0, 115, 0, 520)
@@ -348,6 +338,104 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     targetNameLabel.TextSize = 12
     targetNameLabel.Font = Enum.Font.GothamBold
     targetNameLabel.Parent = hudTitleBar
+
+    local hudContainer = Instance.new("Frame")
+    hudContainer.Size = UDim2.new(1, -10, 1, -44)
+    hudContainer.Position = UDim2.new(0, 5, 0, 40)
+    hudContainer.BackgroundTransparency = 1
+    hudContainer.Parent = hudFrame
+
+    local hudLayout = Instance.new("UIListLayout")
+    hudLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    hudLayout.Padding = UDim.new(0, 6)
+    hudLayout.Parent = hudContainer
+
+    local hudSlotPool = {}
+    local function getOrCreateSlot()
+        local slot = table.remove(hudSlotPool)
+        if not slot then
+            slot = Instance.new("Frame")
+            slot.Size = UDim2.new(1, 0, 0, 95)
+            slot.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            slot.BorderSizePixel = 0
+            
+            local slotCorner = Instance.new("UICorner")
+            slotCorner.CornerRadius = UDim.new(0, 6)
+            slotCorner.Parent = slot
+
+            local iconImg = Instance.new("ImageLabel")
+            iconImg.Name = "Icon"
+            iconImg.Size = UDim2.new(0, 64, 0, 64)
+            iconImg.Position = UDim2.new(0.5, -32, 0, 4)
+            iconImg.BackgroundTransparency = 1
+            iconImg.ScaleType = Enum.ScaleType.Fit
+            iconImg.Parent = slot
+
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Name = "Name"
+            nameLabel.Size = UDim2.new(1, -4, 0, 20)
+            nameLabel.Position = UDim2.new(0, 2, 0, 71)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+            nameLabel.TextSize = 10
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.TextTruncate = Enum.TextTruncate.SplitWord
+            nameLabel.Parent = slot
+        end
+        slot.Parent = hudContainer
+        slot.Visible = true
+        return slot
+    end
+
+    local activeHudSlots = {}
+    task.spawn(function()
+        while screenGui.Parent do
+            pcall(function()
+                if not hudFrame.Visible then return end
+                local targetChar = hudModule.GetTargetedCharacter(silentAimData, aiModule)
+                
+                for _, slot in ipairs(activeHudSlots) do
+                    slot.Parent = nil
+                    slot.Visible = false
+                    table.insert(hudSlotPool, slot)
+                end
+                table.clear(activeHudSlots)
+
+                if not targetChar then
+                    targetNameLabel.Text = "NO TARGET"
+                    local slot = getOrCreateSlot()
+                    slot.Icon.Image = "rbxassetid://0"
+                    slot.Name.Text = "Searching..."
+                    table.insert(activeHudSlots, slot)
+                    return
+                end
+
+                local targetPlayer = Players:GetPlayerFromCharacter(targetChar)
+                targetNameLabel.Text = targetPlayer and targetPlayer.Name or "AI TARGET"
+
+                local equipped = hudModule.GetEquippedItems(targetChar, icons)
+                local orderedItems = {}
+                if equipped.weapon then table.insert(orderedItems, equipped.weapon) end
+                for _, armorName in ipairs(equipped.armor) do table.insert(orderedItems, armorName) end
+
+                if #orderedItems == 0 then
+                    local slot = getOrCreateSlot()
+                    slot.Icon.Image = "rbxassetid://0"
+                    slot.Name.Text = "None Equipped"
+                    table.insert(activeHudSlots, slot)
+                    return
+                end
+
+                for _, itemName in ipairs(orderedItems) do
+                    local slot = getOrCreateSlot()
+                    slot.Icon.Image = icons[itemName] or "rbxassetid://0"
+                    slot.Name.Text = itemName
+                    table.insert(activeHudSlots, slot)
+                end
+            end)
+            task.wait(0.2)
+        end
+    end)
 
     return {
         ScreenGui = screenGui,
