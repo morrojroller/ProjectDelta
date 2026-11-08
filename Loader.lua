@@ -23,29 +23,18 @@ local function fetchModule(moduleName)
     local success, res = pcall(function()
         return game:HttpGet(baseUrl .. moduleName .. ".lua")
     end)
-    if not success then 
-        warn("[Project Delta] HTTP GET Failed for: " .. moduleName)
+    if not success or type(res) ~= "string" or res:find("404: Not Found") then 
+        warn("[Project Delta] Failed to fetch or invalid response for: " .. moduleName)
         error("Failed to fetch module: " .. moduleName) 
     end
     
-    -- Passing the second argument to loadstring tags the chunk name for accurate traceback lines
     local func, err = loadstring(res, "@" .. moduleName .. ".lua")
     if not func then 
-        warn("[Project Delta] Compile Error in [" .. moduleName .. "]: " .. tostring(err))
-        error("Failed to compile module " .. moduleName .. ": " .. tostring(err)) 
+        warn("[Project Delta] Compile Error in [" .. moduleName .. "]: " .. tostring(err) .. "\nResponse preview: " .. res:sub(1, 100))
+        error("Failed to compile module " .. moduleName) 
     end
     
-    -- Execute with xpcall to catch and print runtime errors with traceback
-    local execSuccess, execResult = xpcall(func, function(errMessage)
-        return string.format("\n--- [Project Delta Error] ---\nModule Failed: %s.lua\nMessage: %s\n%s\n-----------------------------", moduleName, tostring(errMessage), debug.traceback())
-    end)
-    
-    if not execSuccess then
-        warn(execResult) -- Prints the full stack trace to the F9 developer console
-        error("Execution crashed in module: " .. moduleName)
-    end
-    
-    return execResult
+    return func()
 end
 
 -- Safe execution wrapper for initialization calls
