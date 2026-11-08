@@ -17,38 +17,24 @@ end
 local baseUrl = "https://raw.githubusercontent.com/morrojroller/ProjectDelta/main/Modules/"
 
 local function fetchModule(moduleName)
-    local url = baseUrl .. moduleName .. ".lua"
-    print("[DIAGNOSTIC] Fetching:", url)
-    
-    local fetchSuccess, res = pcall(function()
-        return game:HttpGet(url)
+    local success, res = pcall(function()
+        return game:HttpGet(baseUrl .. moduleName .. ".lua")
     end)
-    
-    if not fetchSuccess or not res then
-        warn("[DIAGNOSTIC ERROR] HttpGet failed for " .. moduleName .. ": " .. tostring(res))
-        return nil
-    end
-    
-    if string.find(res, "404") or string.find(res, "<html") then
-        warn("[DIAGNOSTIC ERROR] GitHub returned a 404 or HTML page for " .. moduleName .. "! Check if your repository is Public and the branch is 'main'.")
-        print("[RESPONSE SNIPPET]:", string.sub(res, 1, 150))
-        return nil
+    if not success or res == "404: Not Found" then 
+        error("Failed to fetch module from GitHub: " .. moduleName) 
     end
     
     local func, err = loadstring(res)
-    if not func then
-        warn("[DIAGNOSTIC ERROR] Compile failed for " .. moduleName .. ": " .. tostring(err))
-        return nil
+    if not func then 
+        error("Failed to compile module " .. moduleName .. ": " .. tostring(err)) 
     end
     
-    local runSuccess, moduleData = pcall(func)
-    if not runSuccess then
-        warn("[DIAGNOSTIC ERROR] Runtime error in " .. moduleName .. ": " .. tostring(moduleData))
-        return nil
+    local moduleResult = func()
+    if not moduleResult then
+        error("Module " .. moduleName .. " returned nil! Check its 'return' statement.")
     end
     
-    print("[DIAGNOSTIC] Successfully loaded:", moduleName)
-    return moduleData
+    return moduleResult
 end
 
 -- Load Modules
