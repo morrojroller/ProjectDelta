@@ -1,4 +1,3 @@
--- // Modules/UI.lua
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
@@ -53,6 +52,59 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = titleBar
 
+    -- Content Container inside MainFrame
+    local contentContainer = Instance.new("ScrollingFrame")
+    contentContainer.Size = UDim2.new(1, -20, 1, -55)
+    contentContainer.Position = UDim2.new(0, 10, 0, 45)
+    contentContainer.BackgroundTransparency = 1
+    contentContainer.CanvasSize = UDim2.new(0, 0, 0, 300)
+    contentContainer.ScrollBarThickness = 4
+    contentContainer.Parent = mainFrame
+
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Padding = UDim.new(0, 8)
+    contentLayout.Parent = contentContainer
+
+    -- Helper function to create toggles/checkboxes dynamically
+    local function createToggle(name, configKey, callback)
+        local toggleBtn = Instance.new("TextButton")
+        toggleBtn.Size = UDim2.new(1, 0, 0, 35)
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+        toggleBtn.BorderSizePixel = 0
+        toggleBtn.Text = "  " .. name .. ": " .. tostring(silentAimData[configKey])
+        toggleBtn.TextColor3 = Color3.fromRGB(200, 210, 235)
+        toggleBtn.TextSize = 13
+        toggleBtn.Font = Enum.Font.Gotham
+        toggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+        toggleBtn.Parent = contentContainer
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 6)
+        corner.Parent = toggleBtn
+
+        toggleBtn.MouseButton1Click:Connect(function()
+            silentAimData[configKey] = not silentAimData[configKey]
+            toggleBtn.Text = "  " .. name .. ": " .. tostring(silentAimData[configKey])
+            if configModule.Save then configModule:Save() end
+            if callback then callback(silentAimData[configKey]) end
+        end)
+    end
+
+    -- Add Toggles for main features
+    createToggle("Silent Aim Enabled", "Enabled", function(state)
+        combatModule.ApplyAmmoMods(silentAimData)
+        fovCircle.Visible = state
+    end)
+    createToggle("Visible Only Check", "VisibleOnly")
+    createToggle("Fullbright", "Fullbright", function(state)
+        fullbrightModule.Apply(state)
+    end)
+    createToggle("Hide Visuals (ESP)", "HideVisibles")
+    createToggle("Inventory HUD Visible", "InventoryVisible", function(state)
+        -- handled by frame visibility
+    end)
+
     -- Inventory HUD Frame
     local hudFrame = Instance.new("Frame")
     hudFrame.Name = "InventoryHUD"
@@ -83,10 +135,12 @@ function UIModule.CreateUI(silentAimData, configModule, fullbrightModule, combat
     targetNameLabel.Font = Enum.Font.GothamBold
     targetNameLabel.Parent = hudTitleBar
 
-    local hudContainer = Instance.new("Frame")
+    local hudContainer = Instance.new("ScrollingFrame")
     hudContainer.Size = UDim2.new(1, -10, 1, -44)
     hudContainer.Position = UDim2.new(0, 5, 0, 40)
     hudContainer.BackgroundTransparency = 1
+    hudContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    hudContainer.ScrollBarThickness = 2
     hudContainer.Parent = hudFrame
 
     local hudLayout = Instance.new("UIListLayout")
