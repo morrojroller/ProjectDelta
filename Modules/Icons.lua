@@ -346,11 +346,12 @@ local Icons = {
     }
 }
 
--- Flat lookup mapping helper
 local flatIcons = {}
 for category, items in pairs(Icons) do
-    for itemName, assetId in pairs(items) do
-        flatIcons[itemName] = assetId
+    if type(items) == "table" then
+        for itemName, assetId in pairs(items) do
+            flatIcons[itemName] = assetId
+        end
     end
 end
 Icons.Flat = flatIcons
