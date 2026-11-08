@@ -1,4 +1,4 @@
--- // Project Delta Loadstring Core Manager
+-- // Project Delta Loadstring Core Manager (Debug Mode)
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -15,38 +15,62 @@ if not success or not bullet or not bullet.CreateBullet then
     return LocalPlayer:Kick("Couldn't Require Bullet Module.")
 end
 
--- // Corrected Raw URL pointing directly to your repository files
 local baseUrl = "https://raw.githubusercontent.com/morrojroller/ProjectDelta/main/Modules/"
 
 local function fetchModule(moduleName)
     local url = baseUrl .. moduleName .. ".lua"
+    print("[DEBUG] Fetching module:", moduleName, "from URL:", url)
+    
     local fetchSuccess, res = pcall(function()
         return game:HttpGet(url)
     end)
     
-    if not fetchSuccess or not res or res == "404: Not Found" or string.find(res, "<html") then
-        return LocalPlayer:Kick("Failed to fetch raw module: " .. moduleName)
+    if not fetchSuccess or not res then
+        warn("[DEBUG ERROR] HttpGet failed for module:", moduleName, "Result:", tostring(res))
+        return nil
+    end
+    
+    if string.find(res, "404: Not Found") or string.find(res, "<html") then
+        warn("[DEBUG ERROR] GitHub returned 404 or HTML page instead of Lua code for:", moduleName)
+        return nil
     end
     
     local func, err = loadstring(res)
     if not func then
-        return LocalPlayer:Kick("Failed to compile module " .. moduleName .. ": " .. tostring(err))
+        warn("[DEBUG ERROR] Failed to compile module", moduleName, "Error:", tostring(err))
+        return nil
     end
     
-    return func()
+    local runSuccess, moduleData = pcall(func)
+    if not runSuccess then
+        warn("[DEBUG ERROR] Runtime error executing module", moduleName, "Error:", tostring(moduleData))
+        return nil
+    end
+    
+    print("[DEBUG] Successfully loaded module:", moduleName)
+    return moduleData
 end
 
--- Load Modules
-local Icons = fetchModule("Icons")
+-- Load Modules with Safe Fallbacks
+local Icons = fetchModule("Icons") or { Flat = {} }
 local Config = fetchModule("Config")
-local Fullbright = fetchModule("Fullbright")
-local AI = fetchModule("AI")
-local Combat = fetchModule("Combat")
-local HUD = fetchModule("HUD")
-local ESP = fetchModule("ESP")
-local UI = fetchModule("UI")
+local Fullbright = fetchModule("Fullbright") or { Apply = function() end }
+local AI = fetchModule("AI") or { Init = function() end, Cleanup = function() end, CachedAI = {} }
+local Combat = fetchModule("Combat") or { ApplyAmmoMods = function() end, InitBulletHook = function() end, RestoreAmmoMods = function() end, RestoreBulletHook = function() end }
+local HUD = fetchModule("HUD") or { GetEquippedItems = function() return {} end }
+local ESP = fetchModule("ESP") or { CharacterDrawings = {}, Update = function() end, RemoveDrawings = function() end }
+local UI = fetchModule("UI") or { CreateUI = function() return {} end }
 
-Config:Load()
+-- Guard against missing critical config module
+if not Config then
+    warn("[DEBUG FATAL] Config module returned nil! Check your GitHub repository files.")
+    return
+end
+
+if Config.Load then
+    Config:Load()
+end
+
 AI.Init()
 Combat.ApplyAmmoMods(Config.Data)
 Combat.InitBulletHook(bullet, Config.Data, AI)
@@ -55,13 +79,14 @@ if Config.Data.Fullbright then Fullbright.Apply(true) end
 
 local uiElements = UI.CreateUI(Config.Data, Config, Fullbright, Combat, Icons.Flat, HUD, AI)
 
--- // Global Cleanup System (Guaranteed 100% Memory & State Restoration)
+-- // Global Cleanup System
 local activeConnections = {}
 local isCleanedUp = false
 
 local function globalCleanup()
     if isCleanedUp then return end
     isCleanedUp = true
+    print("[DEBUG] Running Global Cleanup...")
 
     pcall(function()
         for _, conn in ipairs(activeConnections) do
@@ -81,14 +106,17 @@ local function globalCleanup()
             pcall(function() ESP.RemoveDrawings(char) end)
         end
     end)
+    print("[DEBUG] Global Cleanup Finished.")
 end
 
 -- Run Loops & Connections
 table.insert(activeConnections, RunService.Heartbeat:Connect(function()
-    uiElements.FovCircle.Radius = Config.Data.FovRadius
-    uiElements.FovCircle.Visible = Config.Data.Enabled
-    if uiElements.FovCircle.Visible then
-        uiElements.FovCircle.Position = game:GetService("Workspace").CurrentCamera.ViewportSize / 2
+    if uiElements.FovCircle then
+        uiElements.FovCircle.Radius = Config.Data.FovRadius
+        uiElements.FovCircle.Visible = Config.Data.Enabled
+        if uiElements.FovCircle.Visible then
+            uiElements.FovCircle.Position = game:GetService("Workspace").CurrentCamera.ViewportSize / 2
+        end
     end
     ESP.Update(true, Config.Data, AI, HUD, Icons.Flat)
 end))
@@ -96,11 +124,11 @@ end))
 table.insert(activeConnections, UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.CapsLock then
         Config.Data.Enabled = not Config.Data.Enabled
-        uiElements.FovCircle.Visible = Config.Data.Enabled
+        if uiElements.FovCircle then uiElements.FovCircle.Visible = Config.Data.Enabled end
         Combat.ApplyAmmoMods(Config.Data)
     elseif input.KeyCode == Enum.KeyCode.RightAlt then
-        uiElements.MainFrame.Visible = not uiElements.MainFrame.Visible
-    elseif input.KeyCode == Enum.KeyCode.Delete thenC
+        if uiElements.MainFrame then uiElements.MainFrame.Visible = not uiElements.MainFrame.Visible end
+    elseif input.KeyCode == Enum.KeyCode.Delete then
         globalCleanup()
     end
 end))
@@ -109,4 +137,4 @@ table.insert(activeConnections, LocalPlayer.AncestryChanged:Connect(function(_, 
     if not parent then globalCleanup() end
 end))
 
-print("Project Delta SilentAim & ESP Initialized Successfully via Loadstring!")
+print("Project Delta SilentAim & ESP Initialized Successfully with Debug Prints!")
