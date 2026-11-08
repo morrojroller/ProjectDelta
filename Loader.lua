@@ -15,16 +15,24 @@ if not success or not bullet or not bullet.CreateBullet then
     return LocalPlayer:Kick("Couldn't Require Bullet Module.")
 end
 
--- // GitHub Raw Base URL (Replace with your repository raw link path)
-local baseUrl = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/Modules/"
+-- // Update with your actual GitHub username and repository name!
+local baseUrl = "https://raw.githubusercontent.com/morrojroller/ProjectDelta/main/Modules/"
 
 local function fetchModule(moduleName)
-    local success, res = pcall(function()
-        return game:HttpGet(baseUrl .. moduleName .. ".lua")
+    local url = baseUrl .. moduleName .. ".lua"
+    local fetchSuccess, res = pcall(function()
+        return game:HttpGet(url)
     end)
-    if not success then error("Failed to fetch module: " .. moduleName) end
+    
+    if not fetchSuccess or not res or res == "404: Not Found" then
+        return LocalPlayer:Kick("Failed to fetch module from GitHub: " .. moduleName)
+    end
+    
     local func, err = loadstring(res)
-    if not func then error("Failed to compile module " .. moduleName .. ": " .. tostring(err)) end
+    if not func then
+        return LocalPlayer:Kick("Failed to compile module " .. moduleName .. ": " .. tostring(err))
+    end
+    
     return func()
 end
 
